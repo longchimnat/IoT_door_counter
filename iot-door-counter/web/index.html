@@ -11,8 +11,316 @@
     GET /api/status, GET /api/stats/hourly, POST /api/reset
 -->
 <html lang="vi">
-<head><meta charset="utf-8"><title>Đếm lượt người qua cửa</title></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đếm lượt người qua cửa</title>
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #ffffff; --text: #1b2433; --muted: #66728a; --line: #e3e8f0;
+    --accent: #2f6fed; --accent-soft: #bcd0fa;
+    --occupied: #d93a3a; --occupied-soft: #fde9e9;   /* LED đỏ  = có người */
+    --empty: #1f9d55;    --empty-soft: #e3f6ea;      /* LED xanh = phòng trống */
+    --warn-bg: #fff4d6; --warn-text: #7a5600;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161f; --card: #1a212d; --text: #e8edf5; --muted: #93a0b8; --line: #2a3445;
+      --accent: #6b9bff; --accent-soft: #34507f;
+      --occupied: #ff6b6b; --occupied-soft: #3a1f24;
+      --empty: #4cd488;    --empty-soft: #173326;
+      --warn-bg: #3a3017; --warn-text: #f3d684;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  .sub { color: var(--muted); font-size: .85rem; }
+  #conn { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+  #conn i { width: 9px; height: 9px; border-radius: 50%; background: var(--empty); display: inline-block; }
+  #conn.off i { background: var(--occupied); }
+  #conn.off { color: var(--occupied); }
+
+  .banner { display: none; background: var(--warn-bg); color: var(--warn-text); padding: 10px 14px;
+            border-radius: 10px; margin-bottom: 14px; font-size: .92rem; }
+  .banner.show { display: block; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .label { color: var(--muted); font-size: .85rem; margin-bottom: 4px; }
+  .big { font-size: 3.2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .unit { font-size: 1rem; font-weight: 500; color: var(--muted); margin-left: 6px; }
+
+  #room { display: flex; align-items: center; gap: 12px; }
+  #room .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--muted); flex: none; }
+  #room .txt { font-size: 1.7rem; font-weight: 700; }
+  #roomCard.occupied { background: var(--occupied-soft); border-color: var(--occupied); }
+  #roomCard.occupied .dot { background: var(--occupied); box-shadow: 0 0 0 5px color-mix(in srgb, var(--occupied) 25%, transparent); }
+  #roomCard.occupied .txt { color: var(--occupied); }
+  #roomCard.empty { background: var(--empty-soft); border-color: var(--empty); }
+  #roomCard.empty .dot { background: var(--empty); box-shadow: 0 0 0 5px color-mix(in srgb, var(--empty) 25%, transparent); }
+  #roomCard.empty .txt { color: var(--empty); }
+
+  .chartHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .chartHead h2 { margin: 0; font-size: 1.05rem; }
+  .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  input[type=date] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+                     background: var(--card); color: var(--text); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); padding: 7px 12px; }
+  button:hover { border-color: var(--accent); }
+  button.danger { background: var(--occupied); border-color: var(--occupied); color: #fff; font-weight: 600; }
+  button.danger:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .55; cursor: wait; }
+
+  #chartBox { position: relative; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  .bar { fill: var(--accent-soft); transition: fill .12s; }
+  .bar.now { fill: var(--accent); }
+  .bar.hover { fill: var(--accent); }
+  .val { fill: var(--text) !important; font-weight: 600; }
+  #tip { position: absolute; pointer-events: none; background: var(--text); color: var(--bg); padding: 4px 9px;
+         border-radius: 6px; font-size: .8rem; white-space: nowrap; transform: translate(-50%, -110%); display: none; }
+  #empty { display: none; text-align: center; color: var(--muted); padding: 8px 0 0; font-size: .9rem; }
+  .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
 <body>
-  <!-- TODO(E) -->
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Đếm lượt người qua cửa</h1>
+      <div class="sub">Capstone IoT – Samsung Innovation Campus 2026</div>
+    </div>
+    <div id="conn"><i></i><span id="connTxt">Đang kết nối…</span></div>
+  </header>
+
+  <div id="banner" class="banner" role="alert"></div>
+
+  <section class="cards">
+    <div class="card">
+      <div class="label">Số lượt hôm nay</div>
+      <div><span class="big" id="count">–</span><span class="unit">lượt</span></div>
+    </div>
+    <div class="card" id="roomCard">
+      <div class="label">Trạng thái phòng</div>
+      <div id="room"><span class="dot"></span><span class="txt" id="roomTxt">–</span></div>
+    </div>
+    <div class="card">
+      <div class="label">Cập nhật lần cuối</div>
+      <div style="font-size:1.25rem;font-weight:600" id="last">–</div>
+      <div class="sub" id="lastAgo">&nbsp;</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chartHead">
+      <h2>Số lượt theo giờ</h2>
+      <div class="tools">
+        <button id="prev" title="Ngày trước" aria-label="Ngày trước">‹</button>
+        <input type="date" id="date" aria-label="Chọn ngày">
+        <button id="next" title="Ngày sau" aria-label="Ngày sau">›</button>
+        <button id="today">Hôm nay</button>
+      </div>
+    </div>
+    <div id="chartBox"><svg id="chart" role="img" aria-label="Biểu đồ số lượt theo giờ"></svg><div id="tip"></div></div>
+    <div id="empty">Chưa có lượt nào trong ngày này.</div>
+    <div class="foot">
+      <span id="total">&nbsp;</span>
+      <span>Giờ theo múi giờ Việt Nam · tự cập nhật mỗi 3 giây</span>
+    </div>
+  </section>
+
+  <div style="margin-top:14px;display:flex;justify-content:flex-end">
+    <button class="danger" id="reset">Đặt lại số đếm về 0</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---------- Cấu hình ----------
+const API = (new URLSearchParams(location.search).get("api") || "").replace(/\/$/, "");
+const REFRESH_MS = 3000;
+const TZ = "Asia/Ho_Chi_Minh";
+
+// ---------- Tiện ích ----------
+const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, "0");
+
+function vnParts(d) {           // ngày/giờ hiện tại theo giờ VN
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit"
+  }).formatToParts(d).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, hour: +p.hour };
+}
+const todayVN = () => vnParts(new Date()).date;
+function shiftDate(str, days) {
+  const [y, m, d] = str.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + days));
+  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+}
+function fmtTime(iso) {
+  return new Intl.DateTimeFormat("vi-VN", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit",
+    day: "2-digit", month: "2-digit", hourCycle: "h23" }).format(new Date(iso));
+}
+function ago(iso) {
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso)) / 1000));
+  if (s < 60) return `${s} giây trước`;
+  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
+  return `${Math.floor(s / 3600)} giờ trước`;
+}
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
+  return r.json();
+}
+
+// ---------- Kết nối ----------
+let failures = 0;
+function setConn(ok, msg) {
+  $("conn").classList.toggle("off", !ok);
+  $("connTxt").textContent = ok ? "Đã kết nối server" : "Mất kết nối";
+  const b = $("banner");
+  b.classList.toggle("show", !ok);
+  if (!ok) b.textContent = "Không lấy được dữ liệu từ server" + (msg ? ` (${msg})` : "") +
+    ". Đang thử lại… Kiểm tra server đã chạy và IP/cổng đúng chưa.";
+}
+
+// ---------- Trạng thái ----------
+let lastUpdateIso = null;
+async function loadStatus() {
+  const s = await api("/api/status");
+  $("count").textContent = s.count_today ?? 0;
+  const card = $("roomCard");
+  card.classList.remove("occupied", "empty");
+  if (s.room_status === "occupied") { card.classList.add("occupied"); $("roomTxt").textContent = "Có người"; }
+  else if (s.room_status === "empty") { card.classList.add("empty"); $("roomTxt").textContent = "Phòng trống"; }
+  else $("roomTxt").textContent = "Chưa rõ";
+  lastUpdateIso = s.last_update || null;
+  renderLast();
+}
+function renderLast() {
+  $("last").textContent = lastUpdateIso ? fmtTime(lastUpdateIso) : "Chưa có dữ liệu";
+  $("lastAgo").textContent = lastUpdateIso ? ago(lastUpdateIso) : " ";
+}
+
+// ---------- Biểu đồ (SVG tự vẽ, không cần thư viện) ----------
+let W = 720, H = 300;
+const M = { l: 34, r: 8, t: 22, b: 30 };
+function niceMax(v) {
+  if (v <= 5) return 5;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= v) return k * p;
+  return v;
+}
+function drawChart(hours, highlightHour) {
+  const svg = $("chart");
+  // co theo độ rộng màn hình: điện thoại dùng khung hẹp để chữ/cột không bị bé
+  W = Math.max(340, Math.min(720, $("chartBox").clientWidth || 720));
+  H = W < 520 ? 260 : 300;
+  const labelStep = W < 520 ? 4 : 2;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const counts = Array.from({ length: 24 }, (_, h) => (hours.find(x => x.hour === h) || {}).count || 0);
+  const max = niceMax(Math.max(...counts));
+  const iw = W - M.l - M.r, ih = H - M.t - M.b, bw = iw / 24;
+  const y = (v) => M.t + ih - (v / max) * ih;
+  let g = "";
+  for (let i = 0; i <= 5; i++) {              // đường lưới + nhãn trục Y
+    const v = (max / 5) * i, yy = y(v);
+    g += `<line class="grid" x1="${M.l}" x2="${W - M.r}" y1="${yy}" y2="${yy}"/>` +
+         `<text x="${M.l - 6}" y="${yy + 4}" text-anchor="end">${Number.isInteger(v) ? v : v.toFixed(1)}</text>`;
+  }
+  counts.forEach((c, h) => {
+    const x = M.l + h * bw, bh = (c / max) * ih;
+    g += `<g data-h="${h}">` +
+         `<rect class="hit" x="${x}" y="${M.t}" width="${bw}" height="${ih}" fill="transparent"/>` +
+         `<rect class="bar${h === highlightHour ? " now" : ""}" x="${x + 3}" y="${y(c)}" width="${bw - 6}" height="${bh}" rx="3"/>` +
+         (c > 0 ? `<text class="val" x="${x + bw / 2}" y="${y(c) - 4}" text-anchor="middle">${c}</text>` : "") +
+         (h % labelStep === 0 ? `<text x="${x + bw / 2}" y="${H - 10}" text-anchor="middle">${pad(h)}h</text>` : "") +
+         `</g>`;
+  });
+  svg.innerHTML = g;
+  const total = counts.reduce((a, b) => a + b, 0);
+  const peak = Math.max(...counts);
+  $("total").textContent = total
+    ? `Tổng trong ngày: ${total} lượt · cao điểm lúc ${counts.indexOf(peak)}h (${peak} lượt)`
+    : " ";
+  $("empty").style.display = total ? "none" : "block";
+}
+// tooltip khi rê chuột
+$("chart").addEventListener("mousemove", (e) => {
+  const g = e.target.closest("g[data-h]"), tip = $("tip");
+  document.querySelectorAll(".bar.hover").forEach(b => b.classList.remove("hover"));
+  if (!g) { tip.style.display = "none"; return; }
+  const h = +g.dataset.h;
+  g.querySelector(".bar").classList.add("hover");
+  const c = (lastHours.find(x => x.hour === h) || {}).count || 0;
+  const box = $("chartBox").getBoundingClientRect();
+  tip.textContent = `${pad(h)}:00 – ${pad(h)}:59 · ${c} lượt`;
+  tip.style.left = (e.clientX - box.left) + "px";
+  tip.style.top = (e.clientY - box.top) + "px";
+  tip.style.display = "block";
+});
+$("chart").addEventListener("mouseleave", () => {
+  $("tip").style.display = "none";
+  document.querySelectorAll(".bar.hover").forEach(b => b.classList.remove("hover"));
+});
+
+let lastHours = [], lastHL = -1;
+window.addEventListener("resize", () => lastHours.length && drawChart(lastHours, lastHL));
+async function loadHourly() {
+  const date = $("date").value || todayVN();
+  const d = await api(`/api/stats/hourly?date=${encodeURIComponent(date)}`);
+  lastHours = d.hours || [];
+  lastHL = date === todayVN() ? vnParts(new Date()).hour : -1;
+  drawChart(lastHours, lastHL);
+}
+
+// ---------- Vòng cập nhật ----------
+let busy = false;
+async function refresh() {
+  if (busy) return;
+  busy = true;
+  try {
+    await Promise.all([loadStatus(), loadHourly()]);
+    failures = 0; setConn(true);
+  } catch (e) {
+    failures++;
+    if (failures >= 2) setConn(false, e.message);   // lỗi 1 lần chưa báo, tránh nháy
+  } finally { busy = false; }
+}
+
+// ---------- Sự kiện giao diện ----------
+$("date").value = todayVN();
+$("date").max = todayVN();
+$("date").addEventListener("change", refresh);
+$("prev").onclick = () => { $("date").value = shiftDate($("date").value || todayVN(), -1); refresh(); };
+$("next").onclick = () => {
+  const n = shiftDate($("date").value || todayVN(), 1);
+  if (n <= todayVN()) { $("date").value = n; refresh(); }
+};
+$("today").onclick = () => { $("date").value = todayVN(); refresh(); };
+
+$("reset").onclick = async () => {
+  if (!confirm("Đặt lại số đếm về 0?\n(Biểu đồ theo giờ vẫn giữ lịch sử.)")) return;
+  const btn = $("reset"); btn.disabled = true;
+  try {
+    await api("/api/reset", { method: "POST" });
+    $("count").textContent = "0";               // phản hồi ngay, lần refresh sau sẽ xác nhận
+    await refresh();
+  } catch (e) {
+    alert("Reset thất bại: " + e.message);
+  } finally { btn.disabled = false; }
+};
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+setInterval(renderLast, 1000);     // cập nhật "x giây trước" mượt hơn
+</script>
 </body>
 </html>
