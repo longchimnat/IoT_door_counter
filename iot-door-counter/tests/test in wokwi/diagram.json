@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "author": "Trang - Capstone IoT De tai 2",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-pi-pico",
+      "id": "pico",
+      "top": 0,
+      "left": 0,
+      "attrs": {
+        "env": "micropython-20231227-v1.22.0"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "us",
+      "top": -113.7,
+      "left": 183.1,
+      "attrs": {
+        "distance": "150"
+      }
+    },
+    {
+      "type": "wokwi-pir-motion-sensor",
+      "id": "pir",
+      "top": -120,
+      "left": -140,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_red",
+      "top": 140,
+      "left": 220,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_green",
+      "top": 190,
+      "left": 220,
+      "attrs": {
+        "color": "limegreen"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_red",
+      "top": 140,
+      "left": 150,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_green",
+      "top": 190,
+      "left": 150,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd",
+      "top": 250,
+      "left": -120,
+      "attrs": {
+        "pins": "i2c"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "us:VCC",
+      "pico:VBUS",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "us:GND",
+      "pico:GND.6",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "us:TRIG",
+      "pico:GP14",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "us:ECHO",
+      "pico:GP15",
+      "blue",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "pir:VCC",
+      "pico:VBUS",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "pir:GND",
+      "pico:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "pir:OUT",
+      "pico:GP16",
+      "orange",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "pico:GP17",
+      "r_red:1",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "r_red:2",
+      "led_red:A",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "led_red:C",
+      "pico:GND.5",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "pico:GP18",
+      "r_green:1",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "r_green:2",
+      "led_green:A",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "led_green:C",
+      "pico:GND.5",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "lcd:VCC",
+      "pico:VBUS",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "lcd:GND",
+      "pico:GND.4",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "lcd:SDA",
+      "pico:GP4",
+      "purple",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "lcd:SCL",
+      "pico:GP5",
+      "gold",
+      [
+        "v0"
+      ]
+    ]
+  ],
+  "dependencies": {}
+}
