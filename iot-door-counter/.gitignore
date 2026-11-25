@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-.venv/
-venv/
-*.db
-.env
-secrets.py
-.pytest_cache/
-.vscode/
