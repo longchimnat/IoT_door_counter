@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+mosquitto/data/
+mosquitto/log/

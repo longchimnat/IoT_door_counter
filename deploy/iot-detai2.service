@@ -1,0 +1,20 @@
+# systemd service - tự chạy backend khi Raspberry Pi / máy Linux khởi động
+# Cài: sudo cp deploy/iot-detai2.service /etc/systemd/system/
+#      sudo systemctl daemon-reload && sudo systemctl enable --now iot-detai2
+# Xem log: journalctl -u iot-detai2 -f
+[Unit]
+Description=IoT De tai 2 backend (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/IOT_detai2
+ExecStart=/home/pi/IOT_detai2/run_prod.sh
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

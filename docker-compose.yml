@@ -1,0 +1,63 @@
+# Chạy toàn bộ: docker compose up -d --build
+#   Dashboard + API : http://localhost:8000      Swagger: http://localhost:8000/docs
+#   PostgreSQL      : localhost:5432             MQTT   : localhost:1883
+name: iot-detai2
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iot_password}
+      POSTGRES_DB: ${POSTGRES_DB:-iot_detai2}
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-iot}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-iot_mqtt_password}
+    # Tạo file mật khẩu từ biến môi trường rồi chạy broker
+    command: >
+      sh -c "mosquitto_passwd -b -c /mosquitto/data/passwd \"$$MQTT_USERNAME\" \"$$MQTT_PASSWORD\" &&
+             chown mosquitto:mosquitto /mosquitto/data/passwd && chmod 0700 /mosquitto/data/passwd &&
+             exec mosquitto -c /mosquitto/config/mosquitto.conf"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-iot}:${POSTGRES_PASSWORD:-iot_password}@db:5432/${POSTGRES_DB:-iot_detai2}
+      AUTO_CREATE_TABLES: "false"
+      MQTT_ENABLED: "true"
+      MQTT_HOST: mqtt
+      MQTT_PORT: "1883"
+      ENVIRONMENT: production
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+
+volumes:
+  pgdata:
+  mosquitto_data:

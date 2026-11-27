@@ -1,0 +1,3 @@
+*.sh text eol=lf
+mosquitto/config/*.conf text eol=lf
+*.bat text eol=crlf

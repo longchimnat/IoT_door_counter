@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đếm lượt người qua cửa · Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231f6f5c%22/%3E%3Cpath d=%22M10 26V8h12v18%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ========== Đăng nhập ========== -->
+  <section id="login-view" class="login-wrap" hidden>
+    <form id="login-form" class="login-card" autocomplete="on">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>Đếm lượt qua cửa</h1>
+          <p class="muted">Capstone IoT · Đề tài 2</p>
+        </div>
+      </div>
+      <label>Tên đăng nhập
+        <input id="login-user" name="username" required autocomplete="username" value="admin">
+      </label>
+      <label>Mật khẩu
+        <input id="login-pass" name="password" type="password" required autocomplete="current-password">
+      </label>
+      <p id="login-error" class="error" role="alert"></p>
+      <button type="submit" class="btn primary">Đăng nhập</button>
+    </form>
+  </section>
+
+  <!-- ========== Dashboard ========== -->
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <div class="brand small">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <strong>Đếm lượt qua cửa</strong>
+      </div>
+      <div class="topbar-right">
+        <label class="select-wrap">
+          <span class="muted">Thiết bị</span>
+          <select id="device-select" aria-label="Chọn thiết bị"></select>
+        </label>
+        <span id="ws-status" class="live off" title="Kết nối realtime">● Mất kết nối</span>
+        <button id="logout-btn" class="btn ghost">Đăng xuất</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="cards">
+        <article class="card count-card">
+          <h2>Lượt hôm nay</h2>
+          <div class="big-number" id="count-today">–</div>
+          <p class="muted" id="count-meta">&nbsp;</p>
+          <div class="reset-row">
+            <button id="reset-btn" class="btn danger">Đặt lại số đếm</button>
+            <button id="reset-cancel" class="btn ghost" hidden>Hủy</button>
+          </div>
+          <p class="muted small" id="reset-msg">&nbsp;</p>
+        </article>
+
+        <article class="card room-card" id="room-card">
+          <h2>Trạng thái phòng</h2>
+          <div class="room-state">
+            <span class="led" id="room-led" aria-hidden="true"></span>
+            <span id="room-text">Chưa có dữ liệu</span>
+          </div>
+          <p class="muted" id="room-meta">&nbsp;</p>
+        </article>
+
+        <article class="card device-card">
+          <h2>Thiết bị</h2>
+          <dl class="kv">
+            <dt>Trạng thái</dt><dd><span id="dev-status" class="pill">–</span></dd>
+            <dt>Vị trí</dt><dd id="dev-location">–</dd>
+            <dt>Tín hiệu cuối</dt><dd id="dev-ping">–</dd>
+            <dt>Khoảng cách</dt><dd id="dev-distance">–</dd>
+          </dl>
+        </article>
+      </section>
+
+      <section class="card chart-card">
+        <div class="card-head">
+          <h2>Lượt theo giờ</h2>
+          <div class="controls">
+            <input type="date" id="chart-date" aria-label="Ngày">
+            <label class="check"><input type="checkbox" id="since-reset" checked> Chỉ tính sau lần đặt lại</label>
+            <button id="export-btn" class="btn ghost">Xuất CSV</button>
+          </div>
+        </div>
+        <p class="muted small" id="chart-total">&nbsp;</p>
+        <div id="chart" class="chart" role="img" aria-label="Biểu đồ số lượt theo giờ"></div>
+      </section>
+
+      <section class="two-col">
+        <article class="card">
+          <div class="card-head"><h2>Lượt gần đây</h2><span class="muted small" id="passages-total"></span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Thời gian</th><th>K/c nhỏ nhất</th><th>K/c nền</th><th>Thời gian chắn</th></tr></thead>
+              <tbody id="passages-body"><tr><td colspan="4" class="muted">Chưa có lượt nào</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Cảnh báo</h2>
+          <ul class="list" id="alerts-list"><li class="muted">Không có cảnh báo</li></ul>
+          <h2 class="mt">Lệnh đã gửi</h2>
+          <ul class="list" id="cmd-list"><li class="muted">Chưa có lệnh</li></ul>
+        </article>
+      </section>
+    </main>
+    <footer class="foot muted small">API docs: <a href="/docs" target="_blank" rel="noopener">/docs</a> · Giờ hiển thị theo Asia/Ho_Chi_Minh</footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
